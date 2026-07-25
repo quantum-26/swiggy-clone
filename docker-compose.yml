@@ -46,6 +46,8 @@ services:
       PORT: 4000
       DATABASE_URL: postgres://swiggy:swiggy_dev_pw@postgres:5432/swiggy_dev
       REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: 8f3a1e6c9b2d4f7a0e5c8b1d3f6a9e2c7b0d4f8a1e3c6b9d2f5a8e1c4b7d0f3a
+      JWT_REFRESH_SECRET: 2c5f8a1e4b7d0f3a6c9e2b5d8f1a4e7c0b3d6f9a2e5c8b1d4f7a0e3c6b9d2f5a
     depends_on:
       postgres:
         condition: service_healthy
