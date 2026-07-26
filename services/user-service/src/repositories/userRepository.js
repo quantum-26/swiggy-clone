@@ -28,6 +28,15 @@ export class UserRepository {
         return result ? result.rows[0] : null;
     }
 
+    async findById(id) {
+        const result = await this.pool.query(
+            'SELECT id, email, password_hash, name, created_at FROM users WHERE id = $1',
+            [id]
+        );
+
+        return result ? result.rows[0] : null;
+    }
+
     async create({
         email,
         passwordHash,

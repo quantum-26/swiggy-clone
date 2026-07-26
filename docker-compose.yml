@@ -33,6 +33,26 @@ services:
       timeout: 5s
       retries: 5
 
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      target: development
+    container_name: swiggy-api-gateway
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      USER_SERVICE_URL: http://user-service:4000
+      JWT_ACCESS_SECRET: 8f3a1e6c9b2d4f7a0e5c8b1d3f6a9e2c7b0d4f8a1e3c6b9d2f5a8e1c4b7d0f3a
+    depends_on:
+      - user-service
+    volumes:
+      - ./services/api-gateway:/app
+      - /app/node_modules
+    command: npm run dev
+  
   user-service:
     build:
       context: ./services/user-service

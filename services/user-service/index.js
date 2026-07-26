@@ -13,6 +13,7 @@ This is what Dependency Inversion looks like in practice, not just in theory —
 swapping Postgres for a different DB later would mean writing a new repository class and changing exactly one line here.
 */
 import { UserRepository } from './src/repositories/userRepository.js';
+import { RefereshTokenRespository } from './src/repositories/refreshTokenRepository.js';
 import { AuthService } from './src/services/authService.js';
 import { AuthController } from './src/controllers/authController.js';
 import { createAuthRoutes } from './src/routes/authRoutes.js';
@@ -25,7 +26,6 @@ app.use(cookieParser());
 
 
 // DB pool create once , reused across request
-console.log(process.env.DATABASE_URL)
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
 })
@@ -45,7 +45,8 @@ const jwtConfig = {
 
 // define (repository → service → controller → routes.)
 const userRepository = new UserRepository(pool);
-const authService = new AuthService(userRepository, jwtConfig);
+const refreshTokenRepository = new RefereshTokenRespository(redisClient);
+const authService = new AuthService(userRepository, jwtConfig, refreshTokenRepository);
 const authController = new AuthController(authService);
 
 // --- Liveness: is the process even running? ---

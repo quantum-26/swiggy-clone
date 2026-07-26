@@ -63,4 +63,49 @@ export class AuthController {
             next(err);
         }
     }
+
+    refresh = async (req, res, next) => {
+        try {
+            const oldRefreshToken = req.cookies.refreshToken;
+
+            if(!oldRefreshToken) {
+                const error = new Error('No refresh token provided');
+                error.statusCode = 401;
+                throw error;
+            }
+
+            const {accessToken, refreshToken} = await this.authService.refresh(oldRefreshToken);
+
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure:  process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60* 1000,
+            });
+
+            res.status(200).json({ accessToken });
+        }
+        catch(err) {
+            // On any refresh failure, proactively clear the cookie client-side
+            // too — no point leaving a dead/stolen token sitting in the browser.
+            res.clearCookie('refreshToken');
+            next(err);
+        }
+    }
+
+    logout = async (req, res, next) => {
+        try{
+            const refreshToken = req.cookies.refreshToken;
+
+            if(refreshToken){
+                await this.authService.logout(refreshToken);
+            }
+
+            res.clearCookie('refreshToken');
+            res.status(204).send();
+        }
+        catch(err){
+            next(err);
+        }
+    }
 }

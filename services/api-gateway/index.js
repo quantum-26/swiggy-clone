@@ -1,71 +1,65 @@
-import express from express;
-import pg from 'pg';
-import { createClient } from 'redis';
+import 'dotenv/config';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+
+import { verifyAccessToken } from './src/middleware/verifyAccessToken.js';
+import { errorHandler } from './src/middleware/errorHandler.js';
+import { services } from './src/config/services.js';
+
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(express.json());
+app.use(cookieParser());
+/*
+    IMPORTANT: do NOT app.use(express.json()) globally before the proxy.
+    If you parse and re-serialize the body here, http-proxy-middleware
+    has to re-stringify it to forward it on, and subtle bugs creep in
+    (wrong Content-Length, lost raw body for things like webhook
+    signature verification later). The gateway's job is to pass bytes
+    through untouched for proxied routes; JSON parsing belongs in the
+    downstream service that actually needs the parsed object.
+*/
 
-
-// DB pool create once , reused across request
-const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-})
-
-// Redis Client
-const redisClient = createClient({
-    url: process.env.REDIS_URL;
-})
-redisClient.on('error', (err) => console.error('Redis client error:', err));
-await redisClient.connect();
-
-// --- Liveness: is the process even running? ---
 app.get('/health/live', (req, res) => {
-    res.status(200).json({
-        status: 'ok',
-        service: 'user-service'
-    });
+    res.status(200).json({ status: 'ok', service: 'api-gateway' });
 });
 
+app.get('/health/ready', (req, res) => {
+    // Gateway itself has no DB/Redis dependency of its own (yet), so
+    // readiness = liveness for now. This will change if we add
+    // gateway-level rate limiting backed by Redis.
+    res.status(200).json({ status: 'ready' });
+});
 
-// --- Readiness: is the process ready for connection / can this instance actually serve traffic right now? ---
-app.get("/healthy/ready", async (req, res) => {
-    try {
-        await pool.query('SELECT 1');
-        await redisClient.ping();
-        res.status(200).json({
-            status: 'ready',
-            db: 'ok',
-            redis: 'ok',
+/*
+    Auth routes are proxied WITHOUT verifyAccessToken — signup, login,
+    and refresh all happen before a valid access token exists.
+    pathRewrite is not used: we want /auth/signup on the gateway to map
+    to /auth/signup on user-service 1:1, so the public API surface and
+    the internal service routes stay identical. Keeps mental mapping simple.
+*/
+app.use('/auth', createProxyMiddleware({
+    target: services.user,
+    changeOrigin: true,
+    onError: (err, req, res) => {
+        console.error('Proxy error -> user-service : ', err.message);
+        res.status(502).json({
+            error: {
+                message: 'user-service unavailable'
+            }
         });
-    }
-    catch (err) {
-        res.status(503).json({
-            status: 'not-ready', error: err.message
-        });
-    }
-});
+    },
+}))
 
-
-
-app.get('/', (req, res) => {
-    res.json({
-        message: 'user-service is alive'
-    });
-});
+app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
-    console.log(`user-service listening on port ${PORT}`);
-})
+    console.log(`api-gateway listening on port ${PORT}`);
+});
 
-// --- Graceful shutdown groundwork (built out fully in Week 6) ---
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down user-service...');
-    server.close( async () => {
-        await pool.end();
-        await redisClient.quit();
-
-        process.exit(0);
-    })
-})
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down api-gateway');
+    server.close(() => process.exit(0));
+});
