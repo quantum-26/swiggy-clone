@@ -1,12 +1,13 @@
 {
-  "name": "user-service",
+  "name": "restaurant-service",
   "version": "1.0.0",
-  "description": "user microservie for swiggy clone",
-  "main": "index.js",
+  "description": "restaurant microservice for swiggy clone — search, listing, menu data",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
+    "seed": "node src/db/seed.js",
     "test": "jest"
   },
   "dependencies": {
@@ -16,7 +17,8 @@
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "@faker-js/faker": "^8.4.1"
   },
   "author": "",
   "license": "ISC"

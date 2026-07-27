@@ -1,6 +1,12 @@
-import express from express;
+import express from 'express';
 import pg from 'pg';
 import { createClient } from 'redis';
+import 'dotenv/config';
+
+import { RestaurantRepository } from './repositories/restaurantRepository.js';
+import { RestaurantService } from './services/restaurantService.js';
+import { RestaurantController } from './controllers/restaurantController.js';
+import { createRestaurantRoutes } from './routes/restaurantRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -15,16 +21,22 @@ const pool = new pg.Pool({
 
 // Redis Client
 const redisClient = createClient({
-    url: process.env.REDIS_URL;
+    url: process.env.REDIS_URL
 })
 redisClient.on('error', (err) => console.error('Redis client error:', err));
 await redisClient.connect();
+
+// Setup
+const restaurantRespository = new RestaurantRepository(pool);
+const restaurantService = new RestaurantService(restaurantRespository);
+const restaurantController = new RestaurantController(restaurantService);
+
 
 // --- Liveness: is the process even running? ---
 app.get('/health/live', (req, res) => {
     res.status(200).json({
         status: 'ok',
-        service: 'user-service'
+        service: 'restaurant-service'
     });
 });
 
@@ -51,7 +63,18 @@ app.get("/healthy/ready", async (req, res) => {
 
 app.get('/', (req, res) => {
     res.json({
-        message: 'user-service is alive'
+        message: 'restaurant-service is alive'
+    });
+});
+
+app.use('/restaurants', createRestaurantRoutes(restaurantController));
+
+app.use((err, req, res, next) => {
+    console.log(err);
+    const statusCode = err.statusCode || 500;
+
+    res.status(statusCode).json({
+        error: { message: err.message || 'Internal server Error'},
     });
 });
 

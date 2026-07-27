@@ -26,5 +26,12 @@
 - Verified end-to-end via curl: signup (201), login (200 + cookie), refresh
   (rotation succeeds), replayed stale cookie → 401 + family revoked, logout (204)
 
-## Week 2
-(not started)
+### Day 4
+- restaurant-service built (routes → controller → service → repository, matching user-service)
+- Schema: restaurants + menu_items, composite index (cuisine, rating), FK index on menu_items.restaurant_id
+- Seed script (faker-generated, 25 restaurants / ~125 menu items, transaction-wrapped, idempotent)
+- GET /restaurants (cuisine + minRating filters, pagination) and GET /restaurants/:id (+ menu) working
+- Bug: CREATE TABLE IF NOT EXISTS silently skipped schema update on a stale table from an earlier
+  attempt — had to DROP + re-apply migration manually. Real gotcha with raw SQL migrations vs a
+  proper migration tool (Knex/Prisma) that tracks applied migrations explicitly.
+- Deferred gateway routing + Consul registration to Day 5 per plan

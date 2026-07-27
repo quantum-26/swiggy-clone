@@ -78,6 +78,29 @@ services:
       - /app/node_modules
     command: npm run dev
 
+  restaurant-service:
+    build:
+      context: ./services/restaurant-service
+      target: development
+    container_name: swiggy-restaurant-service
+    restart: unless-stopped
+    ports:
+      - "4002:4000"
+    environment:
+      NODE_ENV: developement
+      PORT: 4000
+      DATABASE_URL: postgres://swiggy:swiggy_dev_pw@postgres:5432/swiggy_dev
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/restaurant-service:/app
+      - /app/node_modules
+    command: npm run dev
+
 volumes:
   postgres_data:
   redis_data:
