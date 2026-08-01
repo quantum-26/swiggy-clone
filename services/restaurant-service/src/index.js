@@ -7,9 +7,11 @@ import { RestaurantRepository } from './repositories/restaurantRepository.js';
 import { RestaurantService } from './services/restaurantService.js';
 import { RestaurantController } from './controllers/restaurantController.js';
 import { createRestaurantRoutes } from './routes/restaurantRoutes.js';
+import { registerService, deregisterService } from './consul/registerService.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const SERVICE_ID = `restaurant-service-${PORT}`;
 
 app.use(express.json());
 
@@ -42,7 +44,10 @@ app.get('/health/live', (req, res) => {
 
 
 // --- Readiness: is the process ready for connection / can this instance actually serve traffic right now? ---
-app.get("/healthy/ready", async (req, res) => {
+// (was '/healthy/ready' - fixed to '/health/ready' to match user-service
+// and api-gateway; Consul/monitoring conventions only work if every
+// service exposes the same path shape.)
+app.get("/health/ready", async (req, res) => {
     try {
         await pool.query('SELECT 1');
         await redisClient.ping();
@@ -78,13 +83,26 @@ app.use((err, req, res, next) => {
     });
 });
 
-const server = app.listen(PORT, () => {
-    console.log(`user-service listening on port ${PORT}`);
+const server = app.listen(PORT, async () => {
+    console.log(`restaurant-service listening on port ${PORT}`);
+
+    try {
+        await registerService({
+            id: SERVICE_ID,
+            name: 'restaurant-service',
+            address: process.env.CONSUL_SERVICE_ADDRESS || 'restaurant-service',
+            port: Number(PORT),
+        });
+    }
+    catch (err) {
+        console.error('[consul] registration failed:', err.message);
+    }
 })
 
-// --- Graceful shutdown groundwork (built out fully in Week 6) ---
+// --- Graceful shutdown ---
 process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down user-service...');
+    console.log('SIGTERM received, shutting down restaurant-service...');
+    await deregisterService(SERVICE_ID);
     server.close( async () => {
         await pool.end();
         await redisClient.quit();

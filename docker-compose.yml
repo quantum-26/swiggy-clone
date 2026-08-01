@@ -33,6 +33,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Single-node dev-mode Consul agent. `-dev` skips the whole
+  # bootstrap/quorum dance real Consul clusters need - it's an in-memory
+  # single-node agent that's ready in ~1s, which is exactly what a local
+  # docker-compose environment needs. Never use `-dev` in production.
+  consul:
+    image: hashicorp/consul:1.19
+    container_name: swiggy-consul
+    restart: unless-stopped
+    ports:
+      - "8500:8500" # Consul UI + HTTP API - browse http://localhost:8500/ui to see registered services
+    command: agent -dev -client=0.0.0.0
+
   api-gateway:
     build:
       context: ./services/api-gateway
@@ -44,15 +56,17 @@ services:
     environment:
       NODE_ENV: development
       PORT: 4000
-      USER_SERVICE_URL: http://user-service:4000
+      CONSUL_URL: http://consul:8500
       JWT_ACCESS_SECRET: 8f3a1e6c9b2d4f7a0e5c8b1d3f6a9e2c7b0d4f8a1e3c6b9d2f5a8e1c4b7d0f3a
     depends_on:
+      - consul
       - user-service
+      - restaurant-service
     volumes:
       - ./services/api-gateway:/app
       - /app/node_modules
     command: npm run dev
-  
+
   user-service:
     build:
       context: ./services/user-service
@@ -68,11 +82,18 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_ACCESS_SECRET: 8f3a1e6c9b2d4f7a0e5c8b1d3f6a9e2c7b0d4f8a1e3c6b9d2f5a8e1c4b7d0f3a
       JWT_REFRESH_SECRET: 2c5f8a1e4b7d0f3a6c9e2b5d8f1a4e7c0b3d6f9a2e5c8b1d4f7a0e3c6b9d2f5a
+      CONSUL_URL: http://consul:8500
+      # The name Consul advertises for this instance. Set to the Compose
+      # service name so Docker's embedded DNS can resolve it - see the
+      # comment in src/index.js for why this matters.
+      CONSUL_SERVICE_ADDRESS: user-service
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      consul:
+        condition: service_started
     volumes:
       - ./services/user-service:/app
       - /app/node_modules
@@ -87,15 +108,19 @@ services:
     ports:
       - "4002:4000"
     environment:
-      NODE_ENV: developement
+      NODE_ENV: development
       PORT: 4000
       DATABASE_URL: postgres://swiggy:swiggy_dev_pw@postgres:5432/swiggy_dev
       REDIS_URL: redis://redis:6379
+      CONSUL_URL: http://consul:8500
+      CONSUL_SERVICE_ADDRESS: restaurant-service
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      consul:
+        condition: service_started
     volumes:
       - ./services/restaurant-service:/app
       - /app/node_modules

@@ -1,8 +1,8 @@
 // business logic, no HTTP, no SQL
 
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
+import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken} from '../utils/jwtHelper.js';
 
 /*
 this is the bcrypt "cost factor." Each increment doubles the hashing time.
@@ -77,16 +77,14 @@ export class AuthService {
     async #issueTokenPair(user, familyId=randomUUID()) {
         const jti = randomUUID();
 
-        const accessToken = jwt.sign(
-            { sub: user.id, email: user.email},
-            this.jwtConfig.accessSecret,
-            {expiresIn: '15m'}
+        const accessToken = signAccessToken(
+            user,
+            this.jwtConfig.accessSecret
         );
 
-        const refreshToken = jwt.sign(
-            { sub: user.id, tokenType: 'refresh', familyId, jti },
-            this.jwtConfig.refreshSecret,
-            {expiresIn: '7d'}
+        const refreshToken = signRefreshToken(
+            { userID: user.id, familyId, jti },
+            this.jwtConfig.refreshSecret
         );
 
         return { accessToken, refreshToken, familyId, jti };
@@ -175,7 +173,7 @@ export class AuthService {
     async refresh(oldRefreshToken) {
         let payload;
         try {
-            payload = jwt.verify(oldRefreshToken, this.jwtConfig.refreshSecret);
+            payload = verifyRefreshToken(oldRefreshToken, this.jwtConfig.refreshSecret);
         }
         catch(err) {
             const error = new Error('Invalid or expired refresh token');
@@ -218,7 +216,7 @@ export class AuthService {
 
     async logout(refreshToken) {
         try {
-            const payload = jwt.verify(refreshToken, this.jwtConfig.refreshSecret);
+            const payload = verifyRefreshToken(refreshToken, this.jwtConfig.refreshSecret);
             await this.refreshTokenRepository.revokeFamily(payload.familyId);
         }
         catch {
