@@ -1,0 +1,36 @@
+/* ---- BASE (mobile) — this is the DEFAULT, not a fallback.
+   No media query wraps this. Every phone gets this styling first. ---- */
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* single column on narrow screens */
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.restaurant-grid__empty {
+  padding: var(--space-lg);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* ---- Small tablets / large phones landscape (≥600px) ---- */
+@media (min-width: 600px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---- Tablets (≥900px) ---- */
+@media (min-width: 900px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+}
+
+/* ---- Desktop (≥1200px) ---- */
+@media (min-width: 1200px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

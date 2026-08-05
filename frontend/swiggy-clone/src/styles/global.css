@@ -1,0 +1,67 @@
+/* ---- CSS variables (theming foundation — cheap to add now, painful to
+   retrofit once every component hardcodes hex values) ---- */
+:root {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-text-primary: #1c1c1c;
+  --color-text-secondary: #6b6b6b;
+  --color-accent: #fc8019; /* Swiggy-orange-adjacent, not a copy */
+  --color-rating-good: #2e7d32;
+  --color-border: #e5e5e5;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  --font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---- Reset — minimal, not a full normalize.css ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Respect the user's browser font-size setting for accessibility —
+     never hardcode a root font-size in px, it overrides zoom/accessibility
+     preferences */
+  font-size: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---- prefers-reduced-motion — accessibility ritual applies from day one,
+   not just "when we get to animations" ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

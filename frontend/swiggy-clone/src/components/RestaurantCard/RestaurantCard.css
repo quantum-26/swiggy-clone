@@ -1,0 +1,69 @@
+.restaurant-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.restaurant-card__image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3; /* prevents layout shift while image loads — CLS */
+  /* on the image wrapper is doing real work here, not decoration —
+   it reserves the box's height before the image finishes loading, so the card below it doesn't jump when the image pops in */
+}
+
+.restaurant-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.restaurant-card__badge {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  background: var(--color-accent);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.restaurant-card__body {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.restaurant-card__name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.restaurant-card__cuisine {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  /* single-line truncation for long cuisine lists */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.restaurant-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+}
+
+.restaurant-card__rating {
+  color: var(--color-rating-good);
+  font-weight: 600;
+}
