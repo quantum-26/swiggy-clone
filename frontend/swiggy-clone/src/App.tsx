@@ -5,9 +5,9 @@ import './App.css';
 
 function App() {
   return (
-    <div className="=app">
+    <div className="app">
       <header className="app__header">
-        <h1 className="app_logo">SwiggyClone</h1>
+        <h1 className="app__logo">SwiggyClone</h1>
       </header>
 
       <main>
