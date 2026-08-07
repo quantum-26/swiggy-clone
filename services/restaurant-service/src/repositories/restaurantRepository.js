@@ -4,6 +4,7 @@ export class RestaurantRepository {
     }
 
     async findAll({
+        search,
         cuisine,
         minRating,
         limit = 30,
@@ -11,6 +12,16 @@ export class RestaurantRepository {
     } = {}) {
         const conditons = [];
         const values = [];
+
+        // ILIKE = case-insensitive LIKE in Postgres. No trigram/GIN index
+        // needed yet at 25-ish seed rows — a plain index scan is fine.
+        // Worth revisiting if the catalog grows into the thousands; that's
+        // a pg_trgm + GIN index conversation, not a Day 2 concern.
+        if(search){
+            values.push(`%${search}`);
+            conditons.push(`name ILIKE $${values.length}`);
+        }
+
 
         if(cuisine) {
             values.push(cuisine);

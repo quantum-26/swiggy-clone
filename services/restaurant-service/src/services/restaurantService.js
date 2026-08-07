@@ -8,7 +8,7 @@ export class RestaurantService {
         const safePage = Math.max(page, 1);
         const offset = (safePage - 1) * safePageSize;
 
-        const restaurant = await this.restaurantRepository.findAll({
+        const restaurants = await this.restaurantRepository.findAll({
             cuisine,
             minRating,
             limit: safePageSize,
@@ -16,7 +16,7 @@ export class RestaurantService {
         });
 
         return {
-            restaurant,
+            restaurants,
             page: safePage,
             pageSize: safePageSize
         }

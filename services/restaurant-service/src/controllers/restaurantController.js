@@ -5,13 +5,13 @@ export class RestaurantController {
 
     list = async(req, res, next) => {
         try {
-            const { cuisine, minRating, page, pasgeSize } = req.query;
+            const { cuisine, minRating, page, pageSize } = req.query;
 
             const result = await this.restaurantService.listRestaurants({
                 cuisine: cuisine || undefined,
                 minRating: minRating ? Number(minRating) : undefined,
                 page: page ? Number(page) : 1,
-                pasgeSize: pasgeSize ? Number(pasgeSize) : 20,
+                pageSize: pageSize ? Number(pageSize) : 20,
             });
 
             res.status(200).json(result);

@@ -12,3 +12,13 @@
   font-weight: 700;
   color: var(--color-accent);
 }
+
+.app__status {
+  padding: var(--space-md);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.app__status--error {
+  color: var(--color-error);
+}

@@ -1,0 +1,33 @@
+.search-bar {
+    padding: 0 var(--space-md) var(--space-md);
+}
+
+.search-bar__label {
+    /* Visually hidden, still announced by screen readers — the placeholder
+     communicates purpose visually, this label communicates it to
+     assistive tech. Standard sr-only pattern, not a random omission. */
+
+     position: absolute;
+     width: 1px;
+     height: 1px;
+     padding: 0;
+     margin: -1px;
+     overflow: hidden;
+     clip: rect(0,0,0,0);
+     white-space: nowrap;
+     border: 0;
+}
+
+.search-bar__input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  background: var(--color-surface);
+}
+
+.search-bar__input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

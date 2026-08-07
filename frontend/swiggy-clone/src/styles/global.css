@@ -7,6 +7,7 @@
   --color-text-secondary: #6b6b6b;
   --color-accent: #fc8019; /* Swiggy-orange-adjacent, not a copy */
   --color-rating-good: #2e7d32;
+  --color-error: #c0392b;
   --color-border: #e5e5e5;
 
   --radius-sm: 6px;
