@@ -118,3 +118,54 @@ Docker stack running, `api-gateway` + `user-service` live with full JWT auth,
   real example is Week 5's notification providers)
 
 ---
+
+## Week 2 — Day 3 — Nearby Restaurants (Geospatial) + Indexing Lab
+**Status:** ✅ Complete
+
+### Completed
+- Seed script rewritten for volume: batched multi-row INSERTs, configurable
+  via SEED_COUNT (default 2000), restaurants + menu items in ~4 round trips
+  instead of one query per row
+- Nearby-restaurants query: bounding-box pre-filter (sargable range
+  predicate) + Haversine distance computed only within the box, LEAST/
+  GREATEST-clamped acos() to avoid NaN from floating-point rounding near
+  the search origin
+- Composite btree index on (latitude, longitude); pg_trgm extension +
+  GIN trigram index on restaurants.name (carried over from Day 2's known
+  gap)
+- Route ordering fix: /nearby registered before /:id to avoid Express
+  matching "nearby" as a UUID param
+- Full EXPLAIN ANALYZE before/after lab run against 2000 seeded rows
+
+### Key findings (the actual point of today)
+- Naive Haversine (no bounding box) forces Seq Scan regardless of any
+  index — the distance calc isn't a range predicate, nothing to index on
+- Bounding-box version at ~6% selectivity (123/2000 rows): index scan was
+  SLOWER than seq scan (4.63ms vs 1.03ms) — a real, expected crossover
+  effect at this row count/selectivity, not a bug. Documented as: indexes
+  aren't free: they only win once the predicate is selective enough that
+  skipping most of the table outweighs bitmap/heap lookup overhead
+- Trigram search: "kitchen" (~20% selectivity, 412/2000 rows) — seq scan
+  chosen, index would've been slower. "zephyr" (~0% selectivity) —
+  Bitmap Index Scan on idx_restaurants_name_trgm confirmed working.
+  Same underlying lesson as the lat/lng result via a different index type
+- Takeaway for interviews: "does adding an index help" is the wrong
+  question — the real one is "how selective is this predicate," and I
+  can now back that with measured EXPLAIN ANALYZE numbers, not just theory
+
+### Deviations
+- Retyped index name as idx_restaurant_lat_lng (singular) vs migration
+  file's idx_restaurants_lat_lng (plural) — functionally harmless, noting
+  so file and DB don't quietly diverge going forward
+- docker exec -f against a path not present in the container (initial
+  attempt) — fixed by docker cp'ing the migration file into swiggy-postgres
+  first; noting since Postgres container has no bind-mount into the repo,
+  unlike user-service
+
+### Known gap (still open, not closed by today)
+- restaurant-service still has no test suite — no __tests__ folder, and
+  package.json's "test": "jest" script references a dependency that isn't
+  installed. Flagged Day 3 session start, not yet scheduled to a specific
+  day.
+
+  
