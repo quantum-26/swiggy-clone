@@ -8,7 +8,7 @@
     "dev": "nodemon --legacy-watch src/index.js",
     "start": "node src/index.js",
     "seed": "node src/db/seed.js",
-    "test": "jest"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -18,7 +18,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
-    "@faker-js/faker": "^8.4.1"
+    "@faker-js/faker": "^8.4.1",
+    "cross-env": "^10.1.0",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   },
   "author": "",
   "license": "ISC"
