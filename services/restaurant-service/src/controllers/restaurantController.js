@@ -5,9 +5,10 @@ export class RestaurantController {
 
     list = async(req, res, next) => {
         try {
-            const { cuisine, minRating, page, pageSize } = req.query;
+            const { search, cuisine, minRating, page, pageSize } = req.query;
 
             const result = await this.restaurantService.listRestaurants({
+                search: search || undefined,
                 cuisine: cuisine || undefined,
                 minRating: minRating ? Number(minRating) : undefined,
                 page: page ? Number(page) : 1,

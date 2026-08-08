@@ -10,7 +10,7 @@ export class RestaurantRepository {
         limit = 30,
         offset = 0
     } = {}) {
-        const conditons = [];
+        const conditions = [];
         const values = [];
 
         // ILIKE = case-insensitive LIKE in Postgres. No trigram/GIN index
@@ -18,22 +18,22 @@ export class RestaurantRepository {
         // Worth revisiting if the catalog grows into the thousands; that's
         // a pg_trgm + GIN index conversation, not a Day 2 concern.
         if(search){
-            values.push(`%${search}`);
-            conditons.push(`name ILIKE $${values.length}`);
+            values.push(`%${search}%`);
+            conditions.push(`name ILIKE $${values.length}`);
         }
 
 
         if(cuisine) {
             values.push(cuisine);
-            conditons.push(`cuisine = $${values.length}`);
+            conditions.push(`cuisine = $${values.length}`);
         }
 
         if(minRating){
             values.push(minRating);
-            conditons.push(`rating >= $${values.length}`);
+            conditions.push(`rating >= $${values.length}`);
         }
 
-        const whereClause = conditons.length > 0 ? `WHERE ${conditons.join(' AND ')}` : '';
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
         values.push(limit);
         const limitParam = `$${values.length}`;

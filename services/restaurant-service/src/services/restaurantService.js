@@ -3,12 +3,13 @@ export class RestaurantService {
         this.restaurantRepository = restaurantRepository;
     }
 
-    async listRestaurants({ cuisine, minRating, page = 1, pageSize = 20 }) {
+    async listRestaurants({ search, cuisine, minRating, page = 1, pageSize = 20 }) {
         const safePageSize = Math.min(Math.max(pageSize, 1), 50);
         const safePage = Math.max(page, 1);
         const offset = (safePage - 1) * safePageSize;
 
         const restaurants = await this.restaurantRepository.findAll({
+            search,
             cuisine,
             minRating,
             limit: safePageSize,

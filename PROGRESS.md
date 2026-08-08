@@ -78,3 +78,43 @@ Docker stack running, `api-gateway` + `user-service` live with full JWT auth,
 - [x] Closures + call stack lab done
 
 ---
+
+## Week 2 — Day 2 — Restaurant Search (Debounced) + `useDebounce`
+**Status:** ✅ Complete
+
+### Completed
+- restaurant-service: added `name ILIKE` search, composable with existing
+  `cuisine`/`minRating` filters
+- Fixed `pasgeSize` typo (controller + service) → `pageSize`
+- Renamed response envelope `restaurant` → `restaurants` (was singular, is
+  an array)
+- Bug found + fixed: controller never forwarded `search` to the service —
+  root cause of search always returning the same list
+- Bug found + fixed: `ILIKE` pattern missing trailing `%` (only matched
+  names ending in the term, not containing it)
+- Fixed Day 1 gap: `vite.config.ts` proxy needed a `/api` rewrite — gateway
+  has no `/api` prefix, today's fetch would have 404'd
+- Built `useDebounce<T>` custom hook
+- `ApiRestaurant`/`Restaurant` type split + `mapToRestaurant()` mapper
+  (handles pg's `NUMERIC`-as-string coercion on `rating`)
+- `restaurantApi.ts` fetch wrapper — no `AbortController` yet, on purpose
+  (Week 4 race-condition exercise)
+- `SearchBar` component + `App.tsx` rewired: instant input →
+  debounced(400ms) → fetch, with loading/error status states
+
+### Deviations
+- None beyond the bugs above — caught and fixed same-session
+
+### Known gap (scheduled, not skipped)
+- No index on `name` yet for `ILIKE` search — correct at current seed size
+  (~25 rows). Folding a `pg_trgm` GIN index into Day 3's existing
+  indexing/`EXPLAIN ANALYZE` lab, since a plain B-tree can't accelerate
+  `ILIKE '%term%'`
+
+### Note
+- Corrected myself mid-session: called `mapToRestaurant()` "Adapter
+  pattern" — more precisely a mapper/anti-corruption layer, not Adapter
+  (Adapter needs multiple incompatible interfaces unified behind one;
+  real example is Week 5's notification providers)
+
+---
