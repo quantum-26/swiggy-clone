@@ -22,3 +22,36 @@
 .app__status--error {
   color: var(--color-error);
 }
+
+.app__tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.app__tab {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.app__tab--active {
+  background: #282c34;
+  color: #fff;
+  border-color: #282c34;
+}
+
+.browse-all__count {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0.5rem 0;
+}
+
+.browse-all__status {
+  font-size: 0.85rem;
+  color: #d97706;
+  margin: 0.25rem 0;
+}

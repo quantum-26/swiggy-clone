@@ -4,7 +4,11 @@ export class RestaurantService {
     }
 
     async listRestaurants({ search, cuisine, minRating, page = 1, pageSize = 20 }) {
-        const safePageSize = Math.min(Math.max(pageSize, 1), 50);
+        // Cap raised from 50 → 500 specifically for the Browse & Filter
+        // view, which fetches a large page once and then filters
+        // client-side. The default of 20 (search view) is untouched —
+        // this only matters when a caller explicitly asks for more.
+        const safePageSize = Math.min(Math.max(pageSize, 1), 500);
         const safePage = Math.max(page, 1);
         const offset = (safePage - 1) * safePageSize;
 
