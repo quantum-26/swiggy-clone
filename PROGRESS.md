@@ -168,4 +168,73 @@ Docker stack running, `api-gateway` + `user-service` live with full JWT auth,
   installed. Flagged Day 3 session start, not yet scheduled to a specific
   day.
 
-  
+  ## Week 2 — Day 4 — Filters + useTransition vs useDeferredValue + restaurant-service Test Suite
+**Status:** ✅ Complete
+
+### Completed
+- **restaurant-service test gap closed** (carried over from Day 1–3): extracted `createApp()` factory
+  (mirrors user-service's pattern), added `FakeRestaurantRepository`, 10 Supertest integration tests
+  covering list/search/cuisine filters, 404 on unknown id, and — critically — a regression test locking
+  in the `/nearby` route-ordering fix from Day 3 so it can't silently break again
+- Backend: `pageSize` cap raised 50 → 500 in `restaurantService.listRestaurants` to support the
+  Browse & Filter view's single large fetch
+- Frontend: `expensiveFilterAndSort` util (deliberately expensive — 20k-iteration busy loop per
+  filtered item), `FilterPanel` component (cuisine/price/rating controls), tab switcher added to
+  `App.tsx` between Search and Browse & Filter views
+- Built and compared three versions of the same filtering UI on 500 seeded restaurants:
+  - `BrowseAllNaive` — synchronous, blocking, demonstrates the problem
+  - `BrowseAllTransition` — `useTransition`, **first version had a real bug** (see below), fixed
+    and reprofiled to confirm
+  - `BrowseAllDeferred` — `useDeferredValue`, correct from the start
+- Captured and read 5 real React DevTools Profiler exports across the session (not simulated) —
+  naive on initial load, naive on cuisine change, broken transition, corrected transition
+
+### Key findings (the actual point of today)
+
+**On the test suite:**
+- Extracting `createApp()` as a factory (same pattern as user-service) is what makes Supertest
+  possible without a real server/DB — routes, controller validation, and service logic all run for
+  real against a fake repository
+
+**On useTransition — this is the big one:**
+- First `BrowseAllTransition` implementation called `expensiveFilterAndSort()` **eagerly inside the
+  `startTransition` callback, before calling `setState`.** Profiler data proved this: the ~1150ms
+  busy-loop cost was invisible in every commit — only the (cheap) cost of rendering an
+  already-computed array showed up. `startTransition` only affects scheduling of the render a state
+  update triggers — it does nothing for synchronous work that already finished before that state
+  update was ever called, because JS has no way to preempt a running synchronous function
+- **Fix:** moved the expensive call into `useMemo`, computed during render, driven by
+  `transitionFilters` (state only ever updated inside `startTransition`). Reprofiled and confirmed:
+  the cost now correctly lands as self-time on `BrowseAllTransition`'s own fiber inside the
+  `Normal`-priority commit
+- Real interview-relevant takeaway: "I wrapped a setState in startTransition" ≠ "I made the
+  expensive work interruptible." The computation has to happen *as a consequence of* the scheduled
+  render, not before it
+
+**Bonus finding, not chased today:**
+- Even after the fix, "Immediate" (urgent) commits were still costing ~65-95ms on `RestaurantGrid`
+  that shouldn't have needed to re-render at all (`filtered` hadn't changed in those commits).
+  Root cause: neither `RestaurantGrid` nor `RestaurantCard` is wrapped in `React.memo`, so any parent
+  re-render re-runs their render functions regardless of whether props actually changed. Flagged as
+  a concrete, actionable optimization — deferred to Week 5 (`React.memo` is already scoped there),
+  not chased further today
+
+**Methodology caveat, worth remembering for Week 6 load-testing too:**
+- Raw millisecond values dropped across the session (1728.9ms → ~100-230ms range) partly from
+  smaller filtered sets (cuisine-specific vs. all 500), but likely also from V8 JIT warming up
+  `expensiveFilterAndSort` across many repeated calls in the same browser tab/session. The
+  *structural* findings (which fiber bears the cost, urgent vs. transition split) are solid;
+  absolute-ms comparisons across separate profiling recordings in one session are not a clean
+  controlled benchmark the way this morning's `EXPLAIN ANALYZE` before/after was
+
+### Deviations
+- None beyond the useTransition bug above — caught and fixed same-session via real profiler evidence,
+  not silently patched or assumed correct
+
+### Known gaps (carried forward)
+- New Day 4 components (`FilterPanel`, `BrowseAllNaive/Transition/Deferred`, `expensiveFilterAndSort`)
+  have no test coverage yet — explicitly deferred to avoid stacking further scope onto an already
+  dense session; pick up as first task next session
+- axe DevTools / Lighthouse pass on the new Browse & Filter view not yet run — same deferral
+- `React.memo` on `RestaurantGrid`/`RestaurantCard` — flagged optimization, intentionally deferred
+  to Week 5 per roadmap scope

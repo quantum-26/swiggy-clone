@@ -8,33 +8,40 @@ import type { Restaurant } from "../../types/restaurant";
 
 const BROWSE_PAGE_SIZE = 500;
 
-/*
-    FIX #1 — useTransition. Two pieces of state per filter change:
-      - cuisine/maxPrice/minRating: the "urgent" values, updated
-        immediately outside any transition — these drive what the
-        FilterPanel controls SHOW right now, so they must never lag.
-      - filtered: the "non-urgent" DERIVED value, updated inside
-        startTransition — React is explicitly allowed to interrupt or
-        delay this specific update to keep more urgent updates
-        (the next keystroke, the next dropdown change) responsive.
+interface FilterState {
+  cuisine: string;
+  maxPrice: string;
+  minRating: number;
+}
 
-    isPending flips true while a transitioned update is still computing,
-    which gives the UI a way to show "updating..." feedback instead of
-    freezing. Important: useTransition does NOT make
-    expensiveFilterAndSort() run faster — the wall-clock cost is
-    identical to the naive version. What changes is WHEN React allows
-    that cost to block a paint.
+/*
+    CORRECTED — the first version of this file called
+    expensiveFilterAndSort() eagerly inside the startTransition callback,
+    BEFORE calling setState. That meant the expensive work already
+    finished by the time React had any state update to schedule, so
+    wrapping it in startTransition did nothing for responsiveness — a
+    real profiler recording confirmed the busy-loop cost was invisible
+    to React entirely (it ran as plain synchronous JS, not as part of
+    any render).
+
+    Fixed here: startTransition wraps `transitionFilters` — just the
+    filter CRITERIA, not a computed result. expensiveFilterAndSort now
+    runs inside useMemo, DURING render, driven by transitionFilters. This
+    is what actually lets React treat the computation as interruptible
+    low-priority work, because it's now genuinely part of a render that
+    React scheduled at transition priority, not a black-box function call
+    glued synchronously to the event handler.
 */
 export function BrowseAllTransition() {
   const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [cuisine, setCuisine] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [minRating, setMinRating] = useState(0);
-
+  // liveFilters: urgent, drives what the controls SHOW — updates instantly.
+  // transitionFilters: only ever updated inside startTransition — this is
+  // what the expensive render below actually depends on.
+  const [liveFilters, setLiveFilters] = useState<FilterState>({ cuisine: '', maxPrice: '', minRating: 0 });
+  const [transitionFilters, setTransitionFilters] = useState<FilterState>({ cuisine: '', maxPrice: '', minRating: 0 });
   const [isPending, startTransition] = useTransition();
-  const [filtered, setFiltered] = useState<Restaurant[]>([]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -43,9 +50,7 @@ export function BrowseAllTransition() {
       setLoading(true);
       const response = await fetchRestaurants({ pageSize: BROWSE_PAGE_SIZE });
       if (!isCancelled) {
-        const mapped = response.restaurants.map(mapToRestaurant);
-        setAllRestaurants(mapped);
-        setFiltered(mapped);
+        setAllRestaurants(response.restaurants.map(mapToRestaurant));
         setLoading(false);
       }
     }
@@ -59,31 +64,24 @@ export function BrowseAllTransition() {
     [allRestaurants],
   );
 
-  function applyFilters(next: { cuisine: string; maxPrice: string; minRating: number }) {
+  // The expensive call now lives HERE — inside render, wrapped in
+  // useMemo so it doesn't rerun unless allRestaurants or
+  // transitionFilters actually changed.
+  const filtered = useMemo(
+    () =>
+      expensiveFilterAndSort(allRestaurants, {
+        cuisine: transitionFilters.cuisine || null,
+        maxPriceForTwo: transitionFilters.maxPrice ? Number(transitionFilters.maxPrice) : null,
+        minRating: transitionFilters.minRating,
+      }),
+    [allRestaurants, transitionFilters],
+  );
+
+  function updateFilters(next: FilterState) {
+    setLiveFilters(next); // urgent — controls update immediately
     startTransition(() => {
-      setFiltered(
-        expensiveFilterAndSort(allRestaurants, {
-          cuisine: next.cuisine || null,
-          maxPriceForTwo: next.maxPrice ? Number(next.maxPrice) : null,
-          minRating: next.minRating,
-        }),
-      );
+      setTransitionFilters(next); // triggers the expensive render, at transition priority
     });
-  }
-
-  function handleCuisineChange(value: string) {
-    setCuisine(value); // urgent — updates the dropdown instantly
-    applyFilters({ cuisine: value, maxPrice, minRating }); // non-urgent
-  }
-
-  function handleMaxPriceChange(value: string) {
-    setMaxPrice(value);
-    applyFilters({ cuisine, maxPrice: value, minRating });
-  }
-
-  function handleMinRatingChange(value: number) {
-    setMinRating(value);
-    applyFilters({ cuisine, maxPrice, minRating: value });
   }
 
   if (loading) {
@@ -93,12 +91,12 @@ export function BrowseAllTransition() {
   return (
     <div className="browse-all">
       <FilterPanel
-        cuisine={cuisine}
-        onCuisineChange={handleCuisineChange}
-        maxPrice={maxPrice}
-        onMaxPriceChange={handleMaxPriceChange}
-        minRating={minRating}
-        onMinRatingChange={handleMinRatingChange}
+        cuisine={liveFilters.cuisine}
+        onCuisineChange={(value) => updateFilters({ ...liveFilters, cuisine: value })}
+        maxPrice={liveFilters.maxPrice}
+        onMaxPriceChange={(value) => updateFilters({ ...liveFilters, maxPrice: value })}
+        minRating={liveFilters.minRating}
+        onMinRatingChange={(value) => updateFilters({ ...liveFilters, minRating: value })}
         cuisineOptions={cuisineOptions}
       />
       {isPending && (
